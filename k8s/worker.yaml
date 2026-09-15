@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker
+          image: hook-observer-worker:latest
+          imagePullPolicy: Never # Use local image
+          env:
+            - name: DATABASE_URL
+              value: "postgres://user:password@postgres:5432/hookdb?sslmode=disable"
+            - name: KAFKA_BROKER
+              value: "kafka:9092"

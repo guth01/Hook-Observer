@@ -66,3 +66,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - ingestion-api
