@@ -26,6 +26,7 @@ services:
     environment:
       - DATABASE_URL=postgres://user:password@postgres:5432/hookdb?sslmode=disable
       - KAFKA_BROKER=kafka:9092
+      - OTEL_EXPORTER_OTLP_ENDPOINT=jaeger:4317
     depends_on:
       postgres:
         condition: service_healthy
@@ -36,9 +37,12 @@ services:
     build:
       context: ./worker
       dockerfile: Dockerfile
+    ports:
+      - "9091:9091"
     environment:
       - DATABASE_URL=postgres://user:password@postgres:5432/hookdb?sslmode=disable
       - KAFKA_BROKER=kafka:9092
+      - OTEL_EXPORTER_OTLP_ENDPOINT=jaeger:4317
     depends_on:
       postgres:
         condition: service_healthy
@@ -75,3 +79,38 @@ services:
       - "3000:80"
     depends_on:
       - ingestion-api
+
+  # ── Observability Stack ───────────────────────────────────────────────────
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4317:4317"   # OTLP gRPC receiver (used by ingestion-api and worker)
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090" # Prometheus UI / query interface
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+    depends_on:
+      - ingestion-api
+      - worker
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000" # Grafana UI (3001 to avoid clash with dashboard on 3000)
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus

@@ -23,6 +23,8 @@ spec:
               value: "postgres://user:password@postgres:5432/hookdb?sslmode=disable"
             - name: KAFKA_BROKER
               value: "kafka:9092"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "jaeger:4317"
           resources:
             requests:
               cpu: "100m"
